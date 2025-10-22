@@ -34,41 +34,86 @@ split_slides() {
         slide = 0
         current_file = ""
         in_code_block = 0
+        h1_buffer = ""
+        h2_buffer = ""
+        last_was_h1 = 0
+        last_was_h2 = 0
     }
     /^```/ {
         # Toggle code block state
         in_code_block = !in_code_block
+        flush_headings()
         if (current_file != "") {
             print $0 >> current_file
         }
         next
     }
     /^# / && !in_code_block {
-        if (current_file != "") {
-            close(current_file)
+        # If this is first H1 on slide, start new slide
+        if (!last_was_h1) {
+            flush_headings()
+            if (current_file != "") {
+                close(current_file)
+            }
+            slide++
+            current_file = tmpdir "/slide_" slide ".md"
         }
-        slide++
-        current_file = tmpdir "/slide_" slide ".md"
-        heading_file = tmpdir "/heading_" slide ".txt"
-        print substr($0, 3) > heading_file
-        close(heading_file)
+        # Append to H1 buffer with newline
+        if (h1_buffer != "") {
+            h1_buffer = h1_buffer "\n" substr($0, 3)
+        } else {
+            h1_buffer = substr($0, 3)
+        }
+        last_was_h1 = 1
+        last_was_h2 = 0
         next
     }
     /^## / && !in_code_block {
-        # Save H2 headings separately
-        if (current_file != "") {
-            h2_file = tmpdir "/heading2_" slide ".txt"
-            print substr($0, 4) > h2_file
-            close(h2_file)
+        # Flush H1 if we had one
+        if (last_was_h1) {
+            flush_h1()
+            last_was_h1 = 0
         }
+        # Append to H2 buffer with newline
+        if (h2_buffer != "") {
+            h2_buffer = h2_buffer "\n" substr($0, 4)
+        } else {
+            h2_buffer = substr($0, 4)
+        }
+        last_was_h2 = 1
         next
     }
     {
+        # Any other line - flush pending headings
+        flush_headings()
         if (current_file != "") {
             print $0 >> current_file
         }
     }
+    function flush_h1() {
+        if (h1_buffer != "") {
+            heading_file = tmpdir "/heading_" slide ".txt"
+            print h1_buffer > heading_file
+            close(heading_file)
+            h1_buffer = ""
+        }
+    }
+    function flush_h2() {
+        if (h2_buffer != "") {
+            h2_file = tmpdir "/heading2_" slide ".txt"
+            print h2_buffer > h2_file
+            close(h2_file)
+            h2_buffer = ""
+        }
+    }
+    function flush_headings() {
+        flush_h1()
+        flush_h2()
+        last_was_h1 = 0
+        last_was_h2 = 0
+    }
     END {
+        flush_headings()
         if (current_file != "") {
             close(current_file)
         }
@@ -86,19 +131,25 @@ echo "Rendering slides..." >&2
 for i in $(seq 1 $TOTAL_SLIDES); do
     cols=$(get_width)
 
-    # Pre-render H1 heading (with word-wrap)
+    # Pre-render H1 heading (process each line through toilet separately)
     if [ -f "$TMPDIR/heading_$i.txt" ]; then
-        # Fold at word boundaries before toilet (pagga font is ~4:1 ratio)
-        cat "$TMPDIR/heading_$i.txt" | fold -s -w $((cols / 4)) | toilet -f "$TOILET_FONT" -w $cols | lolcat -f > "$TMPDIR/rendered_h1_$i.txt"
+        > "$TMPDIR/rendered_h1_$i.txt"  # Clear file
+        while IFS= read -r line; do
+            # Fold each line at word boundaries before toilet (pagga font is ~4:1 ratio)
+            echo "$line" | fold -s -w $((cols / 4)) | toilet -f "$TOILET_FONT" -w $cols | lolcat -f >> "$TMPDIR/rendered_h1_$i.txt"
+        done < "$TMPDIR/heading_$i.txt"
         wc -l < "$TMPDIR/rendered_h1_$i.txt" > "$TMPDIR/h1_lines_$i.txt"
     else
         echo "0" > "$TMPDIR/h1_lines_$i.txt"
     fi
 
-    # Pre-render H2 heading with 1-space indent (with word-wrap)
+    # Pre-render H2 heading with 1-space indent (process each line through toilet separately)
     if [ -f "$TMPDIR/heading2_$i.txt" ]; then
-        # Fold at word boundaries before toilet (future font is ~2:1 ratio)
-        cat "$TMPDIR/heading2_$i.txt" | fold -s -w $((cols / 2)) | toilet -f "$TOILET_FONT_H2" -w $cols | lolcat -f | sed 's/^/ /' > "$TMPDIR/rendered_h2_$i.txt"
+        > "$TMPDIR/rendered_h2_$i.txt"  # Clear file
+        while IFS= read -r line; do
+            # Fold each line at word boundaries before toilet (future font is ~2:1 ratio)
+            echo "$line" | fold -s -w $((cols / 2)) | toilet -f "$TOILET_FONT_H2" -w $cols | lolcat -f | sed 's/^/ /' >> "$TMPDIR/rendered_h2_$i.txt"
+        done < "$TMPDIR/heading2_$i.txt"
         wc -l < "$TMPDIR/rendered_h2_$i.txt" > "$TMPDIR/h2_lines_$i.txt"
     else
         echo "0" > "$TMPDIR/h2_lines_$i.txt"

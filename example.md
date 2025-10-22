@@ -1,5 +1,6 @@
 # Yale SOM
-## Computing Lunch Series
+## Computing
+## Lunch Series
 
 Welcome to our presentation!
 
