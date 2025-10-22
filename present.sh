@@ -5,16 +5,27 @@
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <markdown-file>"
+    echo "Usage: $0 <markdown-file> [max-width]"
     exit 1
 fi
 
 INPUT_FILE="$1"
+MAX_WIDTH="${2:-}"  # Optional second argument for max width
 TOILET_FONT="${TOILET_FONT:-pagga}"
 TOILET_FONT_H2="${TOILET_FONT_H2:-future}"
 VCENTER="${VCENTER:-false}"  # Set to "true" to vertically center content
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR; tput rmcup 2>/dev/null || printf '\033[?1049l'; clear" EXIT
+
+# Get effective width (minimum of terminal width and max width if provided)
+get_width() {
+    local term_width=$(tput cols)
+    if [ -n "$MAX_WIDTH" ]; then
+        echo $((term_width < MAX_WIDTH ? term_width : MAX_WIDTH))
+    else
+        echo $term_width
+    fi
+}
 
 # Split markdown into individual slide files
 split_slides() {
@@ -73,7 +84,7 @@ TOTAL_SLIDES=$(cat "$TMPDIR/total")
 # Pre-render all slides
 echo "Rendering slides..." >&2
 for i in $(seq 1 $TOTAL_SLIDES); do
-    cols=$(tput cols)
+    cols=$(get_width)
 
     # Pre-render H1 heading (with word-wrap)
     if [ -f "$TMPDIR/heading_$i.txt" ]; then
@@ -105,7 +116,7 @@ tput smcup 2>/dev/null || printf '\033[?1049h'
 
 show_slide() {
     local slide_num=$1
-    local cols=$(tput cols)
+    local cols=$(get_width)
     local lines=$(tput lines)
 
     # Clear screen
