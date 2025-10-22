@@ -75,17 +75,19 @@ echo "Rendering slides..." >&2
 for i in $(seq 1 $TOTAL_SLIDES); do
     cols=$(tput cols)
 
-    # Pre-render H1 heading
+    # Pre-render H1 heading (with word-wrap)
     if [ -f "$TMPDIR/heading_$i.txt" ]; then
-        cat "$TMPDIR/heading_$i.txt" | toilet -f "$TOILET_FONT" -w $cols | lolcat -f > "$TMPDIR/rendered_h1_$i.txt"
+        # Fold at word boundaries before toilet (pagga font is ~4:1 ratio)
+        cat "$TMPDIR/heading_$i.txt" | fold -s -w $((cols / 4)) | toilet -f "$TOILET_FONT" -w $cols | lolcat -f > "$TMPDIR/rendered_h1_$i.txt"
         wc -l < "$TMPDIR/rendered_h1_$i.txt" > "$TMPDIR/h1_lines_$i.txt"
     else
         echo "0" > "$TMPDIR/h1_lines_$i.txt"
     fi
 
-    # Pre-render H2 heading with 1-space indent
+    # Pre-render H2 heading with 1-space indent (with word-wrap)
     if [ -f "$TMPDIR/heading2_$i.txt" ]; then
-        cat "$TMPDIR/heading2_$i.txt" | toilet -f "$TOILET_FONT_H2" -w $cols | lolcat -f | sed 's/^/ /' > "$TMPDIR/rendered_h2_$i.txt"
+        # Fold at word boundaries before toilet (future font is ~2:1 ratio)
+        cat "$TMPDIR/heading2_$i.txt" | fold -s -w $((cols / 2)) | toilet -f "$TOILET_FONT_H2" -w $cols | lolcat -f | sed 's/^/ /' > "$TMPDIR/rendered_h2_$i.txt"
         wc -l < "$TMPDIR/rendered_h2_$i.txt" > "$TMPDIR/h2_lines_$i.txt"
     else
         echo "0" > "$TMPDIR/h2_lines_$i.txt"
