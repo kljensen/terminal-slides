@@ -1,14 +1,17 @@
-# Yale SOM
-## Computing
-## Lunch Series
-
-Welcome to our presentation!
+# Terminal Slides
+## awesome presentations
+## from the command line
 
 This is a test of terminal slides with:
-- **Big ASCII headings** (H1) via toilet + pagga font
-- **Elegant subtitles** (H2) via toilet + smbraille font
+- **Big ASCII headings** (H1)
+- **Elegant subtitles** (H2) 
 - **Rainbow colors** via lolcat
 - **Beautiful markdown** via glow
+
+```python
+print(" ".join(["this", "is", "code"]))
+```
+**Happy Presenting! 🎉**
 
 # Modern Tooling
 ## Shell Scripts + Terminal Art
@@ -36,7 +39,7 @@ Why this approach works:
 
 **Font Pairing**
 - H1: `pagga` - Bold, blocky, high impact
-- H2: `smbraille` - Compact, elegant, sophisticated
+- H2: `future` - Compact, elegant, sophisticated
 
 **Easy Customization**
 ```bash
