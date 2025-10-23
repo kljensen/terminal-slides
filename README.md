@@ -1,4 +1,3 @@
-# Terminal Slides 🎨
 <h1 align="center">
 Terminal Slides
 </h1>
