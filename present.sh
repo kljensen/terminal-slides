@@ -15,15 +15,16 @@ TOILET_FONT="${TOILET_FONT:-pagga}"
 TOILET_FONT_H2="${TOILET_FONT_H2:-future}"
 VCENTER="${VCENTER:-false}"  # Set to "true" to vertically center content
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR; tput rmcup 2>/dev/null || printf '\033[?1049l'; clear" EXIT
+trap 'rm -rf "$TMPDIR"; tput rmcup 2>/dev/null || printf '\''\033[?1049l'\''; clear' EXIT
 
 # Get effective width (minimum of terminal width and max width if provided)
 get_width() {
-    local term_width=$(tput cols)
+    local term_width
+    term_width=$(tput cols)
     if [ -n "$MAX_WIDTH" ]; then
         echo $((term_width < MAX_WIDTH ? term_width : MAX_WIDTH))
     else
-        echo $term_width
+        echo "$term_width"
     fi
 }
 
@@ -128,18 +129,18 @@ TOTAL_SLIDES=$(cat "$TMPDIR/total")
 
 # Pre-render all slides
 echo "Rendering slides..." >&2
-for i in $(seq 1 $TOTAL_SLIDES); do
+for i in $(seq 1 "$TOTAL_SLIDES"); do
     cols=$(get_width)
 
     # Pre-render H1 heading (with word-wrap, preserving newlines)
     if [ -f "$TMPDIR/heading_$i.txt" ]; then
         # Fold each line at word boundaries, then pass all to toilet at once
         # This preserves the color gradient across all lines
-        > "$TMPDIR/folded_h1_$i.txt"
+        true > "$TMPDIR/folded_h1_$i.txt"
         while IFS= read -r line; do
             echo "$line" | fold -s -w $((cols / 4)) >> "$TMPDIR/folded_h1_$i.txt"
         done < "$TMPDIR/heading_$i.txt"
-        cat "$TMPDIR/folded_h1_$i.txt" | toilet -f "$TOILET_FONT" -w $cols | lolcat -f > "$TMPDIR/rendered_h1_$i.txt"
+        cat "$TMPDIR/folded_h1_$i.txt" | toilet -f "$TOILET_FONT" -w "$cols" | lolcat -f > "$TMPDIR/rendered_h1_$i.txt"
         wc -l < "$TMPDIR/rendered_h1_$i.txt" > "$TMPDIR/h1_lines_$i.txt"
     else
         echo "0" > "$TMPDIR/h1_lines_$i.txt"
@@ -149,11 +150,11 @@ for i in $(seq 1 $TOTAL_SLIDES); do
     if [ -f "$TMPDIR/heading2_$i.txt" ]; then
         # Fold each line at word boundaries, then pass all to toilet at once
         # This preserves the color gradient across all lines
-        > "$TMPDIR/folded_h2_$i.txt"
+        true > "$TMPDIR/folded_h2_$i.txt"
         while IFS= read -r line; do
             echo "$line" | fold -s -w $((cols / 2)) >> "$TMPDIR/folded_h2_$i.txt"
         done < "$TMPDIR/heading2_$i.txt"
-        cat "$TMPDIR/folded_h2_$i.txt" | toilet -f "$TOILET_FONT_H2" -w $cols | lolcat -f | sed 's/^/ /' > "$TMPDIR/rendered_h2_$i.txt"
+        cat "$TMPDIR/folded_h2_$i.txt" | toilet -f "$TOILET_FONT_H2" -w "$cols" | lolcat -f | sed 's/^/ /' > "$TMPDIR/rendered_h2_$i.txt"
         wc -l < "$TMPDIR/rendered_h2_$i.txt" > "$TMPDIR/h2_lines_$i.txt"
     else
         echo "0" > "$TMPDIR/h2_lines_$i.txt"
@@ -171,27 +172,29 @@ tput smcup 2>/dev/null || printf '\033[?1049h'
 
 show_slide() {
     local slide_num=$1
-    local cols=$(get_width)
-    local lines=$(tput lines)
+    local cols
+    cols=$(get_width)
 
     # Clear screen
     tput clear
     tput cup 0 0
 
     # Read pre-calculated line counts
-    local h1_lines=$(cat "$TMPDIR/h1_lines_$slide_num.txt")
-    local h2_lines=$(cat "$TMPDIR/h2_lines_$slide_num.txt")
+    local h1_lines
+    h1_lines=$(cat "$TMPDIR/h1_lines_$slide_num.txt")
+    local h2_lines
+    h2_lines=$(cat "$TMPDIR/h2_lines_$slide_num.txt")
 
     # Calculate total heading lines (including blank line after last heading)
     local line_count=0
-    if [ $h1_lines -gt 0 ]; then
+    if [ "$h1_lines" -gt 0 ]; then
         line_count=$((line_count + h1_lines))
     fi
-    if [ $h2_lines -gt 0 ]; then
+    if [ "$h2_lines" -gt 0 ]; then
         line_count=$((line_count + h2_lines))
     fi
     # Add 1 blank line after headings section
-    if [ $h1_lines -gt 0 ] || [ $h2_lines -gt 0 ]; then
+    if [ "$h1_lines" -gt 0 ] || [ "$h2_lines" -gt 0 ]; then
         line_count=$((line_count + 1))
     fi
 
@@ -214,7 +217,7 @@ show_slide() {
     if [ -f "$TMPDIR/slide_$slide_num.md" ]; then
         # Just render directly, no piping to preserve colors
         # Note: May scroll if content is too long
-        glow -w $cols "$TMPDIR/slide_$slide_num.md"
+        glow -w "$cols" "$TMPDIR/slide_$slide_num.md"
     fi
 }
 
@@ -228,7 +231,7 @@ navigate() {
 
         case "$key" in
             ' ')  # Space
-                if [ $CURRENT_SLIDE -lt $TOTAL_SLIDES ]; then
+                if [ "$CURRENT_SLIDE" -lt "$TOTAL_SLIDES" ]; then
                     CURRENT_SLIDE=$((CURRENT_SLIDE + 1))
                     show_slide $CURRENT_SLIDE
                 fi
@@ -237,13 +240,13 @@ navigate() {
                 read -rsn2 key
                 case "$key" in
                     '[C')  # Right arrow
-                        if [ $CURRENT_SLIDE -lt $TOTAL_SLIDES ]; then
+                        if [ "$CURRENT_SLIDE" -lt "$TOTAL_SLIDES" ]; then
                             CURRENT_SLIDE=$((CURRENT_SLIDE + 1))
                             show_slide $CURRENT_SLIDE
                         fi
                         ;;
                     '[D')  # Left arrow
-                        if [ $CURRENT_SLIDE -gt 1 ]; then
+                        if [ "$CURRENT_SLIDE" -gt 1 ]; then
                             CURRENT_SLIDE=$((CURRENT_SLIDE - 1))
                             show_slide $CURRENT_SLIDE
                         fi
@@ -259,7 +262,7 @@ navigate() {
     done
 }
 
-if [ $TOTAL_SLIDES -eq 0 ]; then
+if [ "$TOTAL_SLIDES" -eq 0 ]; then
     echo "No slides found. Make sure your markdown has # H1 headings."
     exit 1
 fi
